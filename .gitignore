@@ -14,6 +14,8 @@ gen/
 
 # Gradle files
 .gradle/
+.idea
+*.iml
 build/
 /*/build/
 
@@ -25,3 +27,6 @@ proguard/
 
 # Log Files
 *.log
+
+#MAC files
+*.DS_Store
