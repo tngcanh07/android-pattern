@@ -6,9 +6,12 @@ import java.util.List;
 /**
  * Created by tongca on 7/14/2015.
  */
-public interface IDataProvider<ID, T extends IModel<ID>> {
+public interface IExternalDataProvider<ID, T extends IModel<ID>> {
     List<T> get(int page, int pageSize, Date lastModified);
+
     int count(Date lastModified);
+
     void insertOrUpdate(T object);
+
     T get(ID id);
 }

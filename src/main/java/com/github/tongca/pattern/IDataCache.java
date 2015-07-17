@@ -1,12 +1,15 @@
 package com.github.tongca.pattern;
 
+import java.util.List;
+
 public interface IDataCache<ID, T extends IModel<ID>> {
-	T get(ID id);
+    T get(ID id);
 
-	T put(T object);
+    List<T> get();
 
-	void delete(ID id);
+    T put(T object);
 
-	void clear();
+    boolean delete(ID id);
 
+    boolean delete();
 }
