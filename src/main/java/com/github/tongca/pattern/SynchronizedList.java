@@ -1,30 +1,28 @@
 package com.github.tongca.pattern;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Observable;
-import java.util.Set;
 
-public abstract class SynchronizedList<ID, T extends IModel<ID>> extends
-        Observable {
-    private IDataCache<ID, T> memoryCache;
-    private IDataCache<ID, T> diskCache;
-
+public abstract class SynchronizedList<ID, T extends IModel<ID>> {
     private final ArrayList<ID> arrIds = new ArrayList<>();
-
-    private final Set<ID> setIds = new HashSet<>();
+    boolean isChanged = false;
+    private IDataProvider<ID, T> memoryCache;
+    private IDataProvider<ID, T> diskCache;
 
     /**
      * constructors
      */
     public SynchronizedList() {
-        memoryCache = new JMMemoryCache<>();
+        memoryCache = new MemoryCache<>();
     }
 
     protected void initFromDiskCache() {
         if (diskCache != null) {
             add(diskCache.get(), false, true);
+            if (isChanged) {
+                isChanged = false;
+                onDataSetChanged();
+            }
         }
     }
 
@@ -41,34 +39,34 @@ public abstract class SynchronizedList<ID, T extends IModel<ID>> extends
     }
 
     protected void add(T object, boolean cacheOnDisk, boolean cacheOnMemory) {
-        if (!contain(object.getId())) {
-            arrIds.add(object.getId());
-            setIds.add(object.getId());
-            setChanged();
-        }
         if (cacheOnMemory && memoryCache != null) {
             memoryCache.put(object);
         }
         if (cacheOnDisk && diskCache != null) {
             diskCache.put(object);
         }
+
+        if (!contain(object.getId())) {
+            arrIds.add(object.getId());
+            onDataSetChanged();
+        }
     }
 
     public void remove(ID id) {
-        arrIds.remove(id);
-        setIds.remove(id);
         if (memoryCache != null) {
             memoryCache.delete(id);
         }
         if (diskCache != null) {
             diskCache.delete(id);
         }
-        setChanged();
+        if (contain(id)) {
+            arrIds.remove(id);
+        }
+        onDataSetChanged();
     }
 
     public void clear(boolean clearMemoryCache, boolean clearDiskCache) {
         arrIds.clear();
-        setIds.clear();
         if (clearMemoryCache) {
             clearMemoryCache();
         }
@@ -99,7 +97,7 @@ public abstract class SynchronizedList<ID, T extends IModel<ID>> extends
     }
 
     public boolean contain(ID id) {
-        return setIds.contains(id);
+        return arrIds.contains(id);
     }
 
     public T get(int position) {
@@ -137,12 +135,16 @@ public abstract class SynchronizedList<ID, T extends IModel<ID>> extends
         return object;
     }
 
-    public void setMemoryCache(IDataCache<ID, T> memoryCache) {
+    public void setMemoryCache(IDataProvider<ID, T> memoryCache) {
         this.memoryCache = memoryCache;
     }
 
-    public void setDiskCache(IDataCache<ID, T> diskCache) {
+    public void setDiskCache(IDataProvider<ID, T> diskCache) {
         this.diskCache = diskCache;
     }
 
+    /**
+     * this method will be called every time when data change (add/remove)
+     */
+    protected abstract void onDataSetChanged();
 }

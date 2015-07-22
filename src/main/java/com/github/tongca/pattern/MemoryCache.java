@@ -5,11 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-public class JMMemoryCache<ID, T extends IModel<ID>> implements
-        IDataCache<ID, T> {
+public class MemoryCache<ID, T extends IModel<ID>> implements
+        IDataProvider<ID, T> {
     private final HashMap<ID, T> cachedObjects;
 
-    public JMMemoryCache() {
+    public MemoryCache() {
         cachedObjects = new HashMap<>();
     }
 

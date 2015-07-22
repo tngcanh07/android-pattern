@@ -3,7 +3,7 @@ package com.github.tongca.pattern;
 import java.util.Date;
 
 public interface IModel<ID> {
-	ID getId();
+    ID getId();
 
-	Date getModifiedDate();
+    Date getModifiedDate();
 }
