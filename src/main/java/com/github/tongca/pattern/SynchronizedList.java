@@ -6,9 +6,13 @@ import java.util.List;
 
 public abstract class SynchronizedList<ID, T extends IModel<ID>> {
     private final ArrayList<ID> arrIds = new ArrayList<>();
-    boolean isChanged = false;
     private IDataProvider<ID, T> memoryCache;
     private IDataProvider<ID, T> diskCache;
+    private long revision = 0;
+
+    public long getRevision() {
+        return revision;
+    }
 
     /**
      * constructors
@@ -20,28 +24,41 @@ public abstract class SynchronizedList<ID, T extends IModel<ID>> {
     protected void initFromDiskCache() {
         if (diskCache != null) {
             add(diskCache.get(), false, true);
-            if (isChanged) {
-                isChanged = false;
-                onDataSetChanged();
-            }
         }
     }
 
     protected void add(List<T> objects, boolean cacheOnDisk, boolean cacheOnMemory) {
+        long rev = getRevision();
         for (T object : objects) {
-            add(object, cacheOnDisk, cacheOnMemory);
+            if (addItem(object, cacheOnDisk, cacheOnMemory)) {
+                onItemAdded(object);
+            }
         }
+        if (rev < getRevision())
+            onDataSetChanged();
     }
 
     protected void add(T[] objects, boolean cacheOnDisk, boolean cacheOnMemory) {
+        long rev = getRevision();
         for (T object : objects) {
-            add(object, cacheOnDisk, cacheOnMemory);
+            if (addItem(object, cacheOnDisk, cacheOnMemory)) {
+                onItemAdded(object);
+            }
         }
+        if (rev < getRevision())
+            onDataSetChanged();
     }
 
     protected void add(T object, boolean cacheOnDisk, boolean cacheOnMemory) {
+        if (addItem(object, cacheOnDisk, cacheOnMemory)) {
+            onItemAdded(object);
+            onDataSetChanged();
+        }
+    }
+
+    private boolean addItem(T object, boolean cacheOnDisk, boolean cacheOnMemory) {
         if (object == null) {
-            return;
+            return false;
         }
         if (shouldUpdate(object)) {
             if (cacheOnMemory && memoryCache != null) {
@@ -53,34 +70,39 @@ public abstract class SynchronizedList<ID, T extends IModel<ID>> {
 
             if (!contain(object.getId())) {
                 arrIds.add(object.getId());
-                onDataSetChanged();
             }
+            revision++;
+            return true;
         }
+        return false;
     }
 
-    public boolean shouldUpdate(T object) {
-        Date newDate = object.getModifiedDate();
-        Date oldDate = null;
-        if (contain(object.getId())) {
-            oldDate = getById(object.getId()).getModifiedDate();
+    private boolean shouldUpdate(T object) {
+        try {
+            Date newDate = object.getModifiedDate();
+            Date oldDate = null;
+            if (contain(object.getId())) {
+                oldDate = getById(object.getId()).getModifiedDate();
+            }
+            if (oldDate != null && newDate != null) {
+                return newDate.before(oldDate);
+            }
+            return oldDate == null;
+        } catch (Exception e) {
+            return true;
         }
-        if (oldDate != null && newDate != null) {
-            return newDate.before(oldDate);
-        }
-        return oldDate == null;
     }
 
     public void remove(ID id) {
-        if (memoryCache != null) {
-            memoryCache.delete(id);
+        remove(id, true, true);
+    }
+
+    protected void remove(ID id, boolean removeOnDisk, boolean removeOnMemory) {
+        final T object = getById(id);
+        if (removeItem(id, removeOnDisk, removeOnMemory) && object != null) {
+            onItemDeleted(object);
+            onDataSetChanged();
         }
-        if (diskCache != null) {
-            diskCache.delete(id);
-        }
-        if (contain(id)) {
-            arrIds.remove(id);
-        }
-        onDataSetChanged();
     }
 
     public void clear(boolean clearMemoryCache, boolean clearDiskCache) {
@@ -91,6 +113,7 @@ public abstract class SynchronizedList<ID, T extends IModel<ID>> {
         if (clearDiskCache) {
             clearDiskCache();
         }
+        onDataSetChanged();
     }
 
     public void clearMemoryCache() {
@@ -153,16 +176,42 @@ public abstract class SynchronizedList<ID, T extends IModel<ID>> {
         return object;
     }
 
-    public void setMemoryCache(IDataProvider<ID, T> memoryCache) {
+    public void enableMemoryCache(IDataProvider<ID, T> memoryCache) {
         this.memoryCache = memoryCache;
     }
 
-    public void setDiskCache(IDataProvider<ID, T> diskCache) {
+    public void enableDiskCache(IDataProvider<ID, T> diskCache) {
         this.diskCache = diskCache;
     }
 
     /**
      * this method will be called every time when data change (add/remove)
      */
-    protected abstract void onDataSetChanged();
+
+    protected void onItemAdded(T object) {
+
+    }
+
+    protected void onItemDeleted(T object) {
+
+    }
+
+    protected void onDataSetChanged() {
+
+    }
+
+    private boolean removeItem(ID id, boolean removeOnDisk, boolean removeOnMemory) {
+        if (removeOnMemory && memoryCache != null) {
+            memoryCache.delete(id);
+        }
+        if (removeOnDisk && diskCache != null) {
+            diskCache.delete(id);
+        }
+        if (contain(id)) {
+            arrIds.remove(id);
+            revision++;
+            return true;
+        }
+        return false;
+    }
 }
