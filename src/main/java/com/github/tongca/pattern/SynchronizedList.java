@@ -1,6 +1,7 @@
 package com.github.tongca.pattern;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public abstract class SynchronizedList<ID, T extends IModel<ID>> {
@@ -39,17 +40,34 @@ public abstract class SynchronizedList<ID, T extends IModel<ID>> {
     }
 
     protected void add(T object, boolean cacheOnDisk, boolean cacheOnMemory) {
-        if (cacheOnMemory && memoryCache != null) {
-            memoryCache.put(object);
+        if (object == null) {
+            return;
         }
-        if (cacheOnDisk && diskCache != null) {
-            diskCache.put(object);
-        }
+        if (shouldUpdate(object)) {
+            if (cacheOnMemory && memoryCache != null) {
+                memoryCache.put(object);
+            }
+            if (cacheOnDisk && diskCache != null) {
+                diskCache.put(object);
+            }
 
-        if (!contain(object.getId())) {
-            arrIds.add(object.getId());
-            onDataSetChanged();
+            if (!contain(object.getId())) {
+                arrIds.add(object.getId());
+                onDataSetChanged();
+            }
         }
+    }
+
+    public boolean shouldUpdate(T object) {
+        Date newDate = object.getModifiedDate();
+        Date oldDate = null;
+        if (contain(object.getId())) {
+            oldDate = getById(object.getId()).getModifiedDate();
+        }
+        if (oldDate != null && newDate != null) {
+            return newDate.before(oldDate);
+        }
+        return oldDate == null;
     }
 
     public void remove(ID id) {
