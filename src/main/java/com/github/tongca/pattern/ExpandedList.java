@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public abstract class SynchronizedList<ID, T extends IModel<ID>> {
+public abstract class ExpandedList<ID, T extends IModel<ID>> {
     private final ArrayList<ID> arrIds = new ArrayList<>();
     private IDataProvider<ID, T> memoryCache;
     private IDataProvider<ID, T> diskCache;
@@ -17,7 +17,7 @@ public abstract class SynchronizedList<ID, T extends IModel<ID>> {
     /**
      * constructors
      */
-    public SynchronizedList() {
+    public ExpandedList() {
         memoryCache = new MemoryCache<>();
     }
 

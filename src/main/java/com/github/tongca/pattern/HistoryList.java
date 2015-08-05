@@ -4,7 +4,7 @@ package com.github.tongca.pattern;
  * Created by Toan Nguyen Canh
  * NVG 7/20/15
  */
-public abstract class HistoryList<ID, T extends IModel<ID>> extends SynchronizedList<ID, T> {
+public abstract class HistoryList<ID, T extends IModel<ID>> extends ExpandedList<ID, T> {
     private int capacity = 0;
 
     @Override
