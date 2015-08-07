@@ -7,10 +7,10 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
     private final ArrayList<ID> arrIds = new ArrayList<>();
     private IDataProvider<ID, T> memoryCache;
     private IDataProvider<ID, T> diskCache;
-    private long revision = 0;
+    private long version = 0;
 
-    public long getRevision() {
-        return revision;
+    public long getVersion() {
+        return version;
     }
 
     /**
@@ -27,24 +27,24 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
     }
 
     protected void add(List<T> objects, boolean cacheOnDisk, boolean cacheOnMemory) {
-        long rev = getRevision();
+        long rev = getVersion();
         for (T object : objects) {
             if (addItem(object, cacheOnDisk, cacheOnMemory)) {
                 onItemAdded(object);
             }
         }
-        if (rev < getRevision())
+        if (rev < getVersion())
             onDataSetChanged();
     }
 
     protected void add(T[] objects, boolean cacheOnDisk, boolean cacheOnMemory) {
-        long rev = getRevision();
+        long rev = getVersion();
         for (T object : objects) {
             if (addItem(object, cacheOnDisk, cacheOnMemory)) {
                 onItemAdded(object);
             }
         }
-        if (rev < getRevision())
+        if (rev < getVersion())
             onDataSetChanged();
     }
 
@@ -70,7 +70,7 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
             if (!contain(object.getId())) {
                 arrIds.add(object.getId());
             }
-            revision++;
+            version++;
             return true;
         }
         return false;
@@ -109,6 +109,7 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
         if (clearDiskCache) {
             clearDiskCache();
         }
+        version++;
         onDataSetChanged();
     }
 
@@ -205,7 +206,7 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
         }
         if (contain(id)) {
             arrIds.remove(id);
-            revision++;
+            version++;
             return true;
         }
         return false;
