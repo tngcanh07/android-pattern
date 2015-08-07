@@ -5,5 +5,7 @@ import java.util.Date;
 public interface IModel<ID> {
     ID getId();
 
+    int getVersion();
+
     Date getModifiedDate();
 }

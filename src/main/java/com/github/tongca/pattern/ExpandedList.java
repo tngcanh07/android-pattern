@@ -1,7 +1,6 @@
 package com.github.tongca.pattern;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 public abstract class ExpandedList<ID, T extends IModel<ID>> {
@@ -79,15 +78,12 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
 
     private boolean shouldUpdate(T object) {
         try {
-            Date newDate = object.getModifiedDate();
-            Date oldDate = null;
+            long newRev = object.getVersion();
+            long oldRev = -1;
             if (contain(object.getId())) {
-                oldDate = getById(object.getId()).getModifiedDate();
+                oldRev = getById(object.getId()).getVersion();
             }
-            if (oldDate != null && newDate != null) {
-                return newDate.before(oldDate);
-            }
-            return oldDate == null;
+            return oldRev <= 0 ||  newRev > oldRev;
         } catch (Exception e) {
             return true;
         }
