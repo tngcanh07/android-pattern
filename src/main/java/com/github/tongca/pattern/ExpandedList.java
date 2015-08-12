@@ -134,6 +134,10 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
         return arrIds.size();
     }
 
+    protected final int size() {
+        return arrIds.size();
+    }
+
     public boolean contain(ID id) {
         return arrIds.contains(id);
     }
