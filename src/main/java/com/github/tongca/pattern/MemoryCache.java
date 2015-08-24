@@ -29,21 +29,28 @@ public class MemoryCache<ID, T extends IModel<ID>> implements
     }
 
     @Override
-    public T put(T object) {
+    public void put(T object) {
         cachedObjects.put(object.getId(), object);
-        return object;
     }
 
     @Override
-    public boolean delete(ID id) {
-        cachedObjects.remove(id);
-        return true;
+    public boolean remove(ID id) {
+        return cachedObjects.remove(id) != null;
     }
 
     @Override
-    public boolean delete() {
+    public int remove(Set<ID> ids) {
+        int result = 0;
+        for (ID id : ids) {
+            if (remove(id))
+                result++;
+        }
+        return result;
+    }
+
+    @Override
+    public void clear() {
         cachedObjects.clear();
-        return true;
     }
 
 }

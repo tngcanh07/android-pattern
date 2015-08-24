@@ -1,23 +1,26 @@
 package com.github.tongca.pattern;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 public abstract class ExpandedList<ID, T extends IModel<ID>> {
     private final ArrayList<ID> arrIds = new ArrayList<>();
     private IDataProvider<ID, T> memoryCache;
     private IDataProvider<ID, T> diskCache;
-    private long version = 0;
-
-    public long getVersion() {
-        return version;
-    }
+    private long revision = 0;
+    private int count = 0;
 
     /**
      * constructors
      */
     public ExpandedList() {
         memoryCache = new MemoryCache<>();
+    }
+
+    public long getRevision() {
+        return revision;
     }
 
     protected void initFromDiskCache() {
@@ -27,35 +30,35 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
     }
 
     protected void add(List<T> objects, boolean cacheOnDisk, boolean cacheOnMemory) {
-        long rev = getVersion();
+        long rev = getRevision();
         for (T object : objects) {
             if (addItem(object, cacheOnDisk, cacheOnMemory)) {
                 onItemAdded(object);
             }
         }
-        if (rev < getVersion())
-            onDataSetChanged();
+        if (rev < getRevision())
+            dataSetChange();
     }
 
     protected void add(T[] objects, boolean cacheOnDisk, boolean cacheOnMemory) {
-        long rev = getVersion();
+        long rev = getRevision();
         for (T object : objects) {
             if (addItem(object, cacheOnDisk, cacheOnMemory)) {
                 onItemAdded(object);
             }
         }
-        if (rev < getVersion())
-            onDataSetChanged();
+        if (rev < getRevision())
+            dataSetChange();
     }
 
     protected void add(T object, boolean cacheOnDisk, boolean cacheOnMemory) {
         if (addItem(object, cacheOnDisk, cacheOnMemory)) {
             onItemAdded(object);
-            onDataSetChanged();
+            dataSetChange();
         }
     }
 
-    private boolean addItem(T object, boolean cacheOnDisk, boolean cacheOnMemory) {
+    protected final boolean addItem(T object, boolean cacheOnDisk, boolean cacheOnMemory) {
         if (object == null) {
             return false;
         }
@@ -67,10 +70,10 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
                 diskCache.put(object);
             }
 
-            if (!contain(object.getId())) {
+            if (!contains(object.getId())) {
                 arrIds.add(object.getId());
             }
-            version++;
+            revision++;
             return true;
         }
         return false;
@@ -78,12 +81,15 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
 
     private boolean shouldUpdate(T object) {
         try {
-            long newRev = object.getVersion();
-            long oldRev = -1;
-            if (contain(object.getId())) {
-                oldRev = getById(object.getId()).getVersion();
+            Date newDate = object.getModifiedDate();
+            Date oldDate = null;
+            if (contains(object.getId())) {
+                oldDate = getById(object.getId()).getModifiedDate();
             }
-            return oldRev <= 0 ||  newRev > oldRev;
+            if (oldDate != null && newDate != null) {
+                return newDate.before(oldDate);
+            }
+            return oldDate == null;
         } catch (Exception e) {
             return true;
         }
@@ -97,7 +103,13 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
         final T object = getById(id);
         if (removeItem(id, removeOnDisk, removeOnMemory) && object != null) {
             onItemDeleted(object);
-            onDataSetChanged();
+            dataSetChange();
+        }
+    }
+
+    protected void remove(Set<ID> ids, boolean removeOnDisk, boolean removeOnMemory) {
+        if (removeItem(ids, removeOnDisk, removeOnMemory)) {
+            dataSetChange();
         }
     }
 
@@ -109,19 +121,19 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
         if (clearDiskCache) {
             clearDiskCache();
         }
-        version++;
-        onDataSetChanged();
+        revision ++;
+        dataSetChange();
     }
 
     public void clearMemoryCache() {
         if (memoryCache != null) {
-            memoryCache.delete();
+            memoryCache.clear();
         }
     }
 
     public void clearDiskCache() {
         if (diskCache != null) {
-            diskCache.delete();
+            diskCache.clear();
         }
     }
 
@@ -131,14 +143,10 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
      * @return number of favorite objectsF
      */
     public int getCount() {
-        return arrIds.size();
+        return count;
     }
 
-    protected final int size() {
-        return arrIds.size();
-    }
-
-    public boolean contain(ID id) {
+    public boolean contains(ID id) {
         return arrIds.contains(id);
     }
 
@@ -146,8 +154,12 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
         return getById(arrIds.get(position));
     }
 
+    public ID getId(int position) {
+        return arrIds.get(position);
+    }
+
     public T getById(ID id) {
-        if (!contain(id))
+        if (!contains(id))
             return null;
         T object = null;
         if (memoryCache != null) {
@@ -164,7 +176,7 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
     }
 
     public int indexOf(ID id) {
-        if (!contain(id))
+        if (!contains(id))
             return -1;
         return arrIds.indexOf(id);
     }
@@ -201,18 +213,45 @@ public abstract class ExpandedList<ID, T extends IModel<ID>> {
 
     }
 
+    protected final void dataSetChange() {
+        count = arrIds.size();
+        onDataSetChanged();
+    }
+
     private boolean removeItem(ID id, boolean removeOnDisk, boolean removeOnMemory) {
         if (removeOnMemory && memoryCache != null) {
-            memoryCache.delete(id);
+            memoryCache.remove(id);
         }
         if (removeOnDisk && diskCache != null) {
-            diskCache.delete(id);
+            diskCache.remove(id);
         }
-        if (contain(id)) {
+        if (contains(id)) {
             arrIds.remove(id);
-            version++;
+            revision++;
             return true;
         }
         return false;
+    }
+
+    private boolean removeItem(Set<ID> ids, boolean removeOnDisk, boolean removeOnMemory) {
+        if (removeOnMemory && memoryCache != null) {
+            memoryCache.remove(ids);
+        }
+        if (removeOnDisk && diskCache != null) {
+            diskCache.remove(ids);
+        }
+        int removed = 0;
+        for (ID id : ids) {
+            if (contains(id)) {
+                arrIds.remove(id);
+                removed++;
+            }
+        }
+
+        return removed > 0;
+    }
+
+    protected List<ID> getIds() {
+        return arrIds;
     }
 }

@@ -9,13 +9,13 @@ public abstract class HistoryList<ID, T extends IModel<ID>> extends ExpandedList
 
     @Override
     public T get(int position) {
-        return super.get(size() - 1 - position);
+        return super.get(getCount() - 1 - position);
     }
 
     @Override
     protected void add(T object, boolean cacheOnDisk, boolean cacheOnMemory) {
         super.add(object, cacheOnDisk, cacheOnMemory);
-        if (capacity > 0 && size() > capacity) {
+        if (capacity > 0 && getCount() > capacity) {
             trim();
         }
 
@@ -31,7 +31,7 @@ public abstract class HistoryList<ID, T extends IModel<ID>> extends ExpandedList
     }
 
     protected final void trim() {
-        while (capacity > 0 && size() > capacity) {
+        while (getCount() > capacity) {
             remove(super.get(0).getId());
         }
     }

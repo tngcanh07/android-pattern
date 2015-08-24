@@ -1,15 +1,19 @@
 package com.github.tongca.pattern;
 
 import java.util.List;
+import java.util.Set;
 
 public interface IDataProvider<ID, T extends IModel<ID>> {
     T get(ID id);
 
     List<T> get();
 
-    T put(T object);
+    void put(T object);
 
-    boolean delete(ID id);
+    void clear();
 
-    boolean delete();
+    boolean remove(ID id);
+
+    int remove(Set<ID> ids);
+
 }
